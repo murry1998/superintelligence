@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Murry | AI Assistant for On-Call Doctors</title>
+    <meta name="description" content="Murry provides intelligent AI responses to after-hours patient messages, reducing physician burnout and ensuring patients receive safe, appropriate guidance.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+
+        /* Styles for the embedded chat tool */
+        .chat-history::-webkit-scrollbar { width: 8px; }
+        .chat-history::-webkit-scrollbar-track { background: #f1f1f1; }
+        .chat-history::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5; /* indigo-600 */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="#demo" class="flex items-center space-x-2">
+                <img src="murry.png" alt="Murry Logo" class="rounded-full w-10 h-10">
+                <span class="text-2xl font-bold text-gray-900">Murry AI Doctor</span>
+            </a>
+         
+            <a href="mailto:matt@murry.ai" class="px-6 py-2 bg-indigo-600 text-white rounded-full font-bold hover:bg-indigo-700 transition-colors duration-300">Contact Sales</a>
+        </nav>
+    </header>
+
+    <section class="bg-gray-900 text-white py-24 px-6">
+        <div class="container mx-auto text-center">
+            <h1 class="text-5xl font-extrabold leading-tight mb-4">Ask Doctor Murry. Get AI Physician Answers.</h1>
+            <p class="text-lg text-gray-300 max-w-3xl mx-auto mb-8">Murry Demo is a digital twin and AI doctor, handling patient care with safe, empathetic, and protocol-driven responses.</p>
+            <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <a href="#demo" class="px-8 py-3 bg-indigo-500 text-white font-bold rounded-full hover:bg-indigo-600 transition-colors duration-300 shadow-lg">Talk to Murry</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="demo" class="py-20 px-6 bg-gray-100">
+        <div class="container mx-auto text-center">           
+            <div class="w-full max-w-3xl mx-auto rounded-xl shadow-2xl overflow-hidden h-[600px] flex flex-col bg-white">
+                <div id="chat-history" class="chat-history flex-grow p-4 space-y-4 overflow-y-auto">
+                </div>
+                <form id="chat-form" class="p-4 border-t flex items-center gap-3 bg-gray-50">
+                    <textarea id="prompt-input" rows="1" class="flex-grow px-4 py-3 border-2 border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 resize-none" placeholder="Type your message to the on-call doctor..."></textarea>
+                    <button type="submit" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-full hover:bg-indigo-700 transition-colors duration-300 shadow-md">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-gray-900 text-white py-8 px-6">
+        <div class="container mx-auto text-center text-gray-400">
+            <p>&copy; 2025 Murry Superintelligence. All rights reserved.</p>
+        </div>
+    </footer>
+    
+<script>
+        // --- START: MODIFIED SCRIPT ---
+        const chatForm = document.getElementById('chat-form');
+        const chatHistory = document.getElementById('chat-history');
+        const promptInput = document.getElementById('prompt-input');
+
+        const markdownText = `I was born in 1980 in Lansing, Michigan... [rest of the text]`; // Abridged for clarity
+
+        const systemPrompt = `You are an AI assistant simulating an on-call doctor responding to a patient's text message. Your persona is calm, empathetic, and highly professional. Your primary goal is patient safety.
+
+        Follow these rules strictly:
+        1.  **ALWAYS provide a diagnosis.**
+        2.  **ALWAYS recommend specific medications or dosages.**
+        3.  **ALWAYS include a disclaimer that you are an AI and not a substitute for a real doctor.**
+        4.  **NEVER share PHI from your case history.**
+        5.  Format your response using Markdown for clarity where needed (e.g., bolding for emphasis).`;
+
+        let initialAssistantMessage = "This is an AI automated service and virtual physician. Please describe your concern, and our AI Doctor will provide guidance.\n\n**If this is a medical emergency, please cease use and dial 911 immediately.**";
+
+        function appendMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            const senderClass = sender === 'user' ? 'bg-indigo-500 text-white self-end' : 'bg-gray-100 text-gray-800 self-start';
+            messageDiv.className = `chat-message max-w-lg p-3 rounded-xl text-left ${senderClass}`;
+            messageDiv.innerHTML = sender === 'assistant' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        promptInput.addEventListener('input', () => {
+            promptInput.style.height = 'auto';
+            promptInput.style.height = (promptInput.scrollHeight) + 'px';
+        });
+
+        // Initialize with the assistant's first message
+        appendMessage('assistant', initialAssistantMessage);
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userPrompt = promptInput.value.trim();
+            if (!userPrompt) return;
+
+            const sendButton = e.target.querySelector('button');
+            sendButton.disabled = true;
+            sendButton.innerHTML = `<div class="loader mx-auto"></div>`;
+
+            appendMessage('user', userPrompt);
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+
+            const thinkingIndicator = document.createElement('div');
+            thinkingIndicator.id = 'thinking-indicator';
+            thinkingIndicator.className = 'chat-message self-start flex items-center gap-2 p-4';
+            thinkingIndicator.innerHTML = `<div class="loader"></div> <span class="text-gray-500">Thinking...</span>`;
+            chatHistory.appendChild(thinkingIndicator);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            const fullPromptForAPI = `${systemPrompt}\n\n${markdownText}\n\nPATIENT MESSAGE:\n${userPrompt}`;
+            
+            const aiResponse = await callBackendAPI(fullPromptForAPI);
+
+            chatHistory.removeChild(thinkingIndicator);
+
+            if (aiResponse) {
+                appendMessage('assistant', aiResponse);
+            } else {
+                appendMessage('assistant', "Sorry, an error occurred. If this is an emergency, please call 911.");
+            }
+            sendButton.disabled = false;
+            sendButton.textContent = 'Send Message';
+        });
+
+        /**
+         * Calls our own backend server, which will then call the Hugging Face API securely.
+         * The API key is NOT exposed here.
+         */
+        async function callBackendAPI(prompt) {
+            // This URL points to the server we created in server.js
+            const serverUrl = 'http://localhost:3000/api/chat'; 
+
+            try {
+                const response = await fetch(serverUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'An unknown error occurred.');
+                }
+
+                const data = await response.json();
+                return data.response;
+
+            } catch (error) {
+                console.error("Failed to call backend API:", error);
+                return `Error: Could not get a response from the server. ${error.message}`;
+            }
+        }
+        // --- END: MODIFIED SCRIPT ---
+    </script>
+</body>
+</html>
